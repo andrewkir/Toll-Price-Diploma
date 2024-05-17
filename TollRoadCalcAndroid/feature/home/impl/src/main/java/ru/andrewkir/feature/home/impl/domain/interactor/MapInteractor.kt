@@ -11,15 +11,33 @@ class MapInteractor(private val repository: MapRepository) {
         pointB: Point,
         startTime: Long?,
         transportClass: Int,
-        paymentMethod: String
+        paymentMethod: String,
     ) =
         repository.getRoute(
             RouteRequest(
                 points = listOf(pointA, pointB),
                 utc = startTime,
                 vehicle_class = transportClass,
-                payment_methods = listOf(paymentMethod)
+                payment_methods = listOf(paymentMethod),
             )
+        )
+
+    suspend fun getMoreRoutes(
+        pointA: Point,
+        pointB: Point,
+        startTime: Long?,
+        transportClass: Int,
+        paymentMethod: String,
+        sessionCookie: String?,
+    ) =
+        repository.getMoreRoutes(
+            RouteRequest(
+                points = listOf(pointA, pointB),
+                utc = startTime,
+                vehicle_class = transportClass,
+                payment_methods = listOf(paymentMethod),
+            ),
+            sessionCookie,
         )
 
     suspend fun getPaymentMethods() =

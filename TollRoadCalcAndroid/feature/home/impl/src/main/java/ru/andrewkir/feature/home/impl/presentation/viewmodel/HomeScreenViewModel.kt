@@ -64,7 +64,11 @@ class HomeScreenViewModel @Inject constructor(
                 setState { copy(startTimeHours = null, startTimeMinutes = null) }
 
             HomeUIEvent.OnApplySettingsClicked ->
-                searchRoute()
+                if (!currentState.isLoading) searchRoute()
+
+            HomeUIEvent.OnLoadMoreRoutesClicked -> {
+                if (!currentState.isLoading) searchRoute(isLoadMoreActive = true)
+            }
 
             is HomeUIEvent.OnSearchQueryPointAChanged -> {
                 setState { copy(pointAQuery = event.query) }
@@ -86,12 +90,12 @@ class HomeScreenViewModel @Inject constructor(
 
             is HomeUIEvent.PointASelected -> {
                 setState { copy(pointA = GeoPoint(latitude = event.lat, longitude = event.lon)) }
-                searchRoute()
+                if (!currentState.isLoading) searchRoute()
             }
 
             is HomeUIEvent.PointBSelected -> {
                 setState { copy(pointB = GeoPoint(latitude = event.lat, longitude = event.lon)) }
-                searchRoute()
+                if (!currentState.isLoading) searchRoute()
             }
 
             is HomeUIEvent.StartTimeSelected -> {
@@ -190,36 +194,60 @@ class HomeScreenViewModel @Inject constructor(
         }
     }
 
-    private fun searchRoute() =
+    private fun searchRoute(isLoadMoreActive: Boolean = false) =
         viewModelScope.launch {
             val pointB = currentState.pointB
             val pointA = currentState.pointA
             if (pointB != null && pointA != null) {
-                setState { copy(routeInfo = emptyList(), isLoading = true) }
+
+                if (!isLoadMoreActive) {
+                    setState { copy(routeInfo = emptyList(), isLoading = true) }
+                } else {
+                    setState { copy(isLoading = true) }
+                }
 
                 var calendar: Calendar? = null
-                val hours = currentState.startTimeHours
-                val minutes = currentState.startTimeMinutes
+                if (!isLoadMoreActive) {
+                    val hours = currentState.startTimeHours
+                    val minutes = currentState.startTimeMinutes
 
-                if (hours != null && minutes != null) {
-                    calendar = Calendar.getInstance()
-                    calendar.set(Calendar.HOUR, hours)
-                    calendar.set(Calendar.MINUTE, minutes)
+                    if (hours != null && minutes != null) {
+                        calendar = Calendar.getInstance()
+                        calendar.set(Calendar.HOUR, hours)
+                        calendar.set(Calendar.MINUTE, minutes)
+                    }
                 }
                 val result = executeRequest {
-                    mapInteractor.getRoute(
-                        Point(
-                            lat = pointA.latitude.value,
-                            lon = pointA.longitude.value,
-                        ),
-                        Point(
-                            lat = pointB.latitude.value,
-                            lon = pointB.longitude.value,
-                        ),
-                        startTime = if (calendar == null) null else calendar.timeInMillis / 1000,
-                        transportClass = currentState.selectedTransportClass.number,
-                        paymentMethod = currentState.selectedPaymentMethod.first,
-                    )
+                    if (isLoadMoreActive) {
+                        mapInteractor.getMoreRoutes(
+                            Point(
+                                lat = pointA.latitude.value,
+                                lon = pointA.longitude.value,
+                            ),
+                            Point(
+                                lat = pointB.latitude.value,
+                                lon = pointB.longitude.value,
+                            ),
+                            startTime = if (calendar == null) null else calendar.timeInMillis / 1000,
+                            transportClass = currentState.selectedTransportClass.number,
+                            paymentMethod = currentState.selectedPaymentMethod.first,
+                            sessionCookie = currentState.sessionId,
+                        )
+                    } else {
+                        mapInteractor.getRoute(
+                            Point(
+                                lat = pointA.latitude.value,
+                                lon = pointA.longitude.value,
+                            ),
+                            Point(
+                                lat = pointB.latitude.value,
+                                lon = pointB.longitude.value,
+                            ),
+                            startTime = if (calendar == null) null else calendar.timeInMillis / 1000,
+                            transportClass = currentState.selectedTransportClass.number,
+                            paymentMethod = currentState.selectedPaymentMethod.first,
+                        )
+                    }
                 }
                 when (result) {
                     NetworkResult.NetworkError ->
@@ -229,22 +257,43 @@ class HomeScreenViewModel @Inject constructor(
                         setEffect(HomeUIEffect.ShowSnackbar(result.error?.detail ?: "Ошибка"))
 
                     is NetworkResult.Success -> {
-                        setState { copy(routeInfo = emptyList()) }
-                        result.value.forEachIndexed { index, route ->
+                        if (!isLoadMoreActive) {
+                            val cookie = result.value.headers()["Set-Cookie"]
+                            if (cookie != null) {
+                                val params = cookie.split(';')
+                                val sessionId =
+                                    params.find { parameter -> parameter.startsWith("sessionid") }
+
+                                if (sessionId != null) {
+                                    setState { copy(sessionId = "$sessionId;") }
+                                } else {
+                                    setState { copy(sessionId = null) }
+                                }
+                            } else {
+                                setState { copy(sessionId = null) }
+                            }
+                            setState { copy(routeInfo = emptyList()) }
+                        }
+
+                        result.value.body()?.forEachIndexed { index, route ->
                             val routeInfos = currentState.routeInfo.toMutableList()
                             val routeInfo = RouteInfo(
                                 cost = route.total_cost,
                                 duration = route.total_duration,
                                 distance = route.total_distance,
-                                isSelected = index == 0,
+                                isSelected = index == 0 && !isLoadMoreActive,
                                 points = route.points,
                                 tollRoads = route.toll_roads
                             )
                             routeInfos.add(routeInfo)
                             setState { copy(routeInfo = routeInfos) }
-                            if (index == 0) {
+                            if (index == 0 && !isLoadMoreActive) {
                                 drawRouteOnMap(routeInfo)
                             }
+                        }
+
+                        if (result.value.body()?.isEmpty() != false) {
+                            setState { copy(sessionId = null) }
                         }
                     }
                 }

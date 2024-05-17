@@ -32,6 +32,7 @@ fun BottomRoutesSelector(
     modifier: Modifier = Modifier,
     routes: List<RouteInfo>,
     onEvent: (HomeUIEvent) -> Unit,
+    isLoadMoreRoutesButtonEnabled: Boolean = true,
 ) {
     Column(
         modifier = modifier,
@@ -53,7 +54,8 @@ fun BottomRoutesSelector(
                 modifier = Modifier
                     .padding(horizontal = 18.dp)
                     .padding(top = 16.dp)
-                    .align(Alignment.CenterHorizontally)
+                    .align(Alignment.CenterHorizontally),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 routes.forEach { route ->
                     item {
@@ -95,6 +97,31 @@ fun BottomRoutesSelector(
                                     .border(1.dp, Color.Black, shape = RoundedCornerShape(6.dp))
                                     .padding(vertical = 2.dp, horizontal = 4.dp),
                                 text = if (route.cost == null) "*" else "${route.cost} руб"
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+                    }
+                }
+
+                if(isLoadMoreRoutesButtonEnabled) {
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .padding(2.dp)
+                                .padding(horizontal = 6.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.surface)
+                                .clickable(enabled = true, onClick = {
+                                    onEvent(HomeUIEvent.OnLoadMoreRoutesClicked)
+                                }),
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                modifier = Modifier
+                                    .padding(horizontal = 16.dp)
+                                    .padding(bottom = 4.dp),
+                                text = "+ ещё"
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                         }

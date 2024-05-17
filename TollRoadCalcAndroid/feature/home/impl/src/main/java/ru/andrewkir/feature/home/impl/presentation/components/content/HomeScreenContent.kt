@@ -315,6 +315,7 @@ fun HomeScreenContent(
                     if (uiState.routeInfo.isNotEmpty()) {
                         BottomRoutesSelector(
                             routes = uiState.routeInfo,
+                            isLoadMoreRoutesButtonEnabled = uiState.sessionId != null,
                             onEvent = onEvent,
                         )
                     }

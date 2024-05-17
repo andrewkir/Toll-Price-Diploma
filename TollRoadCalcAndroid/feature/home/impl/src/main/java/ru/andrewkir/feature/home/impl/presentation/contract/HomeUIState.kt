@@ -1,13 +1,10 @@
 package ru.andrewkir.feature.home.impl.presentation.contract
 
-import android.location.Location
 import ru.andrewkir.core.presentation.contract.UIState
 import ru.andrewkir.feature.home.impl.domain.models.LocationDetails
-import ru.andrewkir.feature.home.impl.domain.models.Locations
 import ru.andrewkir.feature.home.impl.domain.models.TransportClass
 import ru.andrewkir.feature.home.impl.presentation.model.RouteInfo
 import ru.dgis.sdk.coordinates.GeoPoint
-import ru.dgis.sdk.directory.DirectoryObject
 
 
 data class HomeUIState(
@@ -25,5 +22,6 @@ data class HomeUIState(
     val selectedTransportClass: TransportClass = TransportClass.First,
     val paymentMethods: Map<String, String> = emptyMap(),
     val selectedPaymentMethod: Pair<String, String> = "CASH" to "Наличными или картой",
+    val sessionId: String? = null,
 ): UIState {
 }

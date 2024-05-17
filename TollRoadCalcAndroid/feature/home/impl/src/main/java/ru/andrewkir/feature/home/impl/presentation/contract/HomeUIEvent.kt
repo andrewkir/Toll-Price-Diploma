@@ -22,4 +22,6 @@ sealed class HomeUIEvent : UIEvent {
     data object OnApplySettingsClicked : HomeUIEvent()
 
     class OnRouteButtonClicked(val routeInfo: RouteInfo): HomeUIEvent()
+
+    data object OnLoadMoreRoutesClicked : HomeUIEvent()
 }
