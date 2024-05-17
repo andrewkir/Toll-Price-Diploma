@@ -1,0 +1,6 @@
+package ru.andrewkir.feature.onboarding.impl.domain.usecases
+
+data class AppEntryUseCases(
+    val readAppEntry: ReadAppEntry,
+    val saveAppEntry: SaveAppEntry,
+)
